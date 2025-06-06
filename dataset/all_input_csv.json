@@ -1,0 +1,52 @@
+{
+	"name": "all_input_csv",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureBlobStorage_to_input",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"container": "input"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "internal_card_mapping",
+				"type": "String"
+			},
+			{
+				"name": "first_active_month",
+				"type": "String"
+			},
+			{
+				"name": "reward_program",
+				"type": "String"
+			},
+			{
+				"name": "latitude",
+				"type": "String"
+			},
+			{
+				"name": "longitude",
+				"type": "String"
+			},
+			{
+				"name": "fico_score",
+				"type": "String"
+			},
+			{
+				"name": "age",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
