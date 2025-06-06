@@ -1,0 +1,33 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "sfa-adf-test"
+		},
+		"AzureBlobStorage_to_input_connectionString": {
+			"value": ""
+		},
+		"AzureBlobStorage_to_output_connectionString": {
+			"value": ""
+		},
+		"Salesforce v2_clientSecret": {
+			"value": ""
+		},
+		"sfa_test_logs_connectionString": {
+			"value": ""
+		},
+		"Salesforce v2_properties_typeProperties_environmentUrl": {
+			"value": "https://orgfarm-dfbf843bf5-dev-ed.develop.my.salesforce.com"
+		},
+		"Salesforce v2_properties_typeProperties_clientId": {
+			"value": "3MVG9rZjd7MXFdLgRHW3.F9ZnPhTUxfmjGakCu.Wzbv5N6WgYo2eU6_lOZmicEbnPeqVAJZB722xwBwOSM0dj"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}

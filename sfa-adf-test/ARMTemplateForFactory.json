@@ -1,0 +1,526 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "sfa-adf-test"
+		},
+		"AzureBlobStorage_to_input_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureBlobStorage_to_input'"
+		},
+		"AzureBlobStorage_to_output_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureBlobStorage_to_output'"
+		},
+		"Salesforce v2_clientSecret": {
+			"type": "secureString",
+			"metadata": "Secure string for 'clientSecret' of 'Salesforce v2'"
+		},
+		"sfa_test_logs_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'sfa_test_logs'"
+		},
+		"Salesforce v2_properties_typeProperties_environmentUrl": {
+			"type": "string",
+			"defaultValue": "https://orgfarm-dfbf843bf5-dev-ed.develop.my.salesforce.com"
+		},
+		"Salesforce v2_properties_typeProperties_clientId": {
+			"type": "string",
+			"defaultValue": "3MVG9rZjd7MXFdLgRHW3.F9ZnPhTUxfmjGakCu.Wzbv5N6WgYo2eU6_lOZmicEbnPeqVAJZB722xwBwOSM0dj"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/1_input_to_output')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "input_to_dataset",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "all_input_csv",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "cardholder_dest",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "delete_input",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "input_to_dataset",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "all_input_csv",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"logStorageSettings": {
+								"linkedServiceName": {
+									"referenceName": "sfa_test_logs",
+									"type": "LinkedServiceReference"
+								},
+								"path": "log"
+							},
+							"enableLogging": true,
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-05-29T09:09:11Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/all_input_csv')]",
+				"[concat(variables('factoryId'), '/datasets/cardholder_dest')]",
+				"[concat(variables('factoryId'), '/linkedServices/sfa_test_logs')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/2_copy_to_salesforce')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "SalesforceV2Sink",
+								"writeBatchSize": 100000,
+								"writeBehavior": "insert"
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "cardholder",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "SalesforceObject_Customer",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/cardholder')]",
+				"[concat(variables('factoryId'), '/datasets/SalesforceObject_Customer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SalesforceObject_Address')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Salesforce v2",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SalesforceV2Object",
+				"schema": [],
+				"typeProperties": {
+					"objectApiName": "Address"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/Salesforce v2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SalesforceObject_Customer')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Salesforce v2",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SalesforceV2Object",
+				"schema": [],
+				"typeProperties": {
+					"objectApiName": "Customer"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/Salesforce v2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/all_input_csv')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage_to_input",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": "input"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "internal_card_mapping",
+						"type": "String"
+					},
+					{
+						"name": "first_active_month",
+						"type": "String"
+					},
+					{
+						"name": "reward_program",
+						"type": "String"
+					},
+					{
+						"name": "latitude",
+						"type": "String"
+					},
+					{
+						"name": "longitude",
+						"type": "String"
+					},
+					{
+						"name": "fico_score",
+						"type": "String"
+					},
+					{
+						"name": "age",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage_to_input')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/cardholder')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage_to_input",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "cardholder_info.csv",
+						"container": "input"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "internal_card_mapping",
+						"type": "String"
+					},
+					{
+						"name": "first_active_month",
+						"type": "String"
+					},
+					{
+						"name": "reward_program",
+						"type": "String"
+					},
+					{
+						"name": "latitude",
+						"type": "String"
+					},
+					{
+						"name": "longitude",
+						"type": "String"
+					},
+					{
+						"name": "fico_score",
+						"type": "String"
+					},
+					{
+						"name": "age",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage_to_input')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/cardholder_dest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage_to_output",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": "output"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage_to_output')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/output_to_input')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage_to_input",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": "input"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "internal_card_mapping",
+						"type": "String"
+					},
+					{
+						"name": "first_active_month",
+						"type": "String"
+					},
+					{
+						"name": "reward_program",
+						"type": "String"
+					},
+					{
+						"name": "latitude",
+						"type": "String"
+					},
+					{
+						"name": "longitude",
+						"type": "String"
+					},
+					{
+						"name": "fico_score",
+						"type": "String"
+					},
+					{
+						"name": "age",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage_to_input')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureBlobStorage_to_input')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureBlobStorage_to_input_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureBlobStorage_to_output')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureBlobStorage_to_output_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Salesforce v2')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "SalesforceV2",
+				"typeProperties": {
+					"environmentUrl": "[parameters('Salesforce v2_properties_typeProperties_environmentUrl')]",
+					"clientId": "[parameters('Salesforce v2_properties_typeProperties_clientId')]",
+					"clientSecret": {
+						"type": "SecureString",
+						"value": "[parameters('Salesforce v2_clientSecret')]"
+					},
+					"apiVersion": "54.0",
+					"authenticationType": "OAuth2ClientCredential"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/sfa_test_logs')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('sfa_test_logs_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

@@ -1,0 +1,84 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "sfa-adf-test"
+		},
+		"AzureBlobStorage_to_input_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureBlobStorage_to_input'"
+		},
+		"AzureBlobStorage_to_output_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureBlobStorage_to_output'"
+		},
+		"Salesforce v2_clientSecret": {
+			"type": "secureString",
+			"metadata": "Secure string for 'clientSecret' of 'Salesforce v2'"
+		},
+		"sfa_test_logs_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'sfa_test_logs'"
+		},
+		"Salesforce v2_properties_typeProperties_environmentUrl": {
+			"type": "string",
+			"defaultValue": "https://orgfarm-dfbf843bf5-dev-ed.develop.my.salesforce.com"
+		},
+		"Salesforce v2_properties_typeProperties_clientId": {
+			"type": "string",
+			"defaultValue": "3MVG9rZjd7MXFdLgRHW3.F9ZnPhTUxfmjGakCu.Wzbv5N6WgYo2eU6_lOZmicEbnPeqVAJZB722xwBwOSM0dj"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "sfa-adf-test_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"AzureBlobStorage_to_input_connectionString": {
+						"value": "[parameters('AzureBlobStorage_to_input_connectionString')]"
+					},
+					"AzureBlobStorage_to_output_connectionString": {
+						"value": "[parameters('AzureBlobStorage_to_output_connectionString')]"
+					},
+					"Salesforce v2_clientSecret": {
+						"value": "[parameters('Salesforce v2_clientSecret')]"
+					},
+					"sfa_test_logs_connectionString": {
+						"value": "[parameters('sfa_test_logs_connectionString')]"
+					},
+					"Salesforce v2_properties_typeProperties_environmentUrl": {
+						"value": "[parameters('Salesforce v2_properties_typeProperties_environmentUrl')]"
+					},
+					"Salesforce v2_properties_typeProperties_clientId": {
+						"value": "[parameters('Salesforce v2_properties_typeProperties_clientId')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
