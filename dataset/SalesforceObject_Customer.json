@@ -1,0 +1,15 @@
+{
+	"name": "SalesforceObject_Customer",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Salesforce v2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SalesforceV2Object",
+		"schema": [],
+		"typeProperties": {
+			"objectApiName": "Customer"
+		}
+	}
+}
