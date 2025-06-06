@@ -3,8 +3,8 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Copy data1",
-				"type": "Copy",
+				"name": "LookupFullData",
+				"type": "Lookup",
 				"dependsOn": [],
 				"policy": {
 					"timeout": "0.12:00:00",
@@ -13,16 +13,7 @@
 					"secureOutput": false,
 					"secureInput": false
 				},
-				"userProperties": [
-					{
-						"name": "Source",
-						"value": "input//cardholder_info.csv"
-					},
-					{
-						"name": "Destination",
-						"value": "Address"
-					}
-				],
+				"userProperties": [],
 				"typeProperties": {
 					"source": {
 						"type": "DelimitedTextSource",
@@ -35,85 +26,157 @@
 							"type": "DelimitedTextReadSettings"
 						}
 					},
-					"sink": {
-						"type": "SalesforceV2Sink",
-						"writeBatchSize": 100000,
-						"writeBehavior": "insert"
-					},
-					"enableStaging": false,
-					"translator": {
-						"type": "TabularTranslator",
-						"mappings": [
-							{
-								"source": {
-									"name": "LastName",
-									"type": "String",
-									"physicalType": "String"
-								},
-								"sink": {
-									"name": "LastName",
-									"type": "String",
-									"physicalType": "string"
-								}
-							},
-							{
-								"source": {
-									"name": "FirstName",
-									"type": "String",
-									"physicalType": "String"
-								},
-								"sink": {
-									"name": "FirstName",
-									"type": "String",
-									"physicalType": "string"
-								}
-							},
-							{
-								"source": {
-									"name": "Phone",
-									"type": "String",
-									"physicalType": "String"
-								},
-								"sink": {
-									"name": "Phone",
-									"type": "String",
-									"physicalType": "phone"
-								}
-							},
-							{
-								"source": {
-									"name": "Email",
-									"type": "String",
-									"physicalType": "String"
-								},
-								"sink": {
-									"name": "Email",
-									"type": "String",
-									"physicalType": "email"
-								}
-							}
-						],
-						"typeConversion": true,
-						"typeConversionSettings": {
-							"allowDataTruncation": true,
-							"treatBooleanAsNumber": false
-						}
-					}
-				},
-				"inputs": [
-					{
-						"referenceName": "dummy_contact",
+					"dataset": {
+						"referenceName": "dummy_contact_v2",
 						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "totalRecords",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "LookupFullData",
+						"dependencyConditions": [
+							"Succeeded"
+						]
 					}
 				],
-				"outputs": [
-					{
-						"referenceName": "SalesforceObject_Contact",
-						"type": "DatasetReference"
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "totalRecords",
+					"value": {
+						"value": "@length(activity('LookupFullData').output.value)",
+						"type": "Expression"
 					}
-				]
+				}
+			},
+			{
+				"name": "totalBatches",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "LookupFullData",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "totalBatches",
+					"value": {
+						"value": "@div(add(length(activity('LookupFullData').output.value), sub(pipeline().parameters.batchSize, 1)), pipeline().parameters.batchSize)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "LoopThroughBatches",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "totalBatches",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "totalRecords",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@range(0, variables('totalBatches'))",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "CopyToSalesforce",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "JsonSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "JsonReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SalesforceV2Sink",
+									"writeBatchSize": 100000,
+									"writeBehavior": "insert"
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "Json1",
+									"type": "DatasetReference",
+									"parameters": {
+										"inputArray": {
+											"value": "@take(skip(activity('LookupFullData').output.value, mul(item(), pipeline().parameters.batchSize)), pipeline().parameters.batchSize)",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SalesforceObject_Contact",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
 			}
 		],
+		"parameters": {
+			"batchSize": {
+				"type": "int",
+				"defaultValue": 10
+			},
+			"inputArray": {
+				"type": "array"
+			}
+		},
+		"variables": {
+			"totalRecords": {
+				"type": "Integer"
+			},
+			"totalBatches": {
+				"type": "Integer"
+			}
+		},
 		"annotations": []
 	}
 }
